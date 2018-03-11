@@ -5,14 +5,14 @@ namespace dw
 {
 	namespace cmp
 	{
-		void CLPlatform::get_all_platforms(std::vector<Platform*>& platforms)
+		void CLPlatform::get_all_platforms(std::vector<CLPlatform>& platforms)
 		{
 			std::vector<cl::Platform> cl_platforms;
 			cl::Platform::get(&cl_platforms);
 
 			for (int i = 0; i < cl_platforms.size(); i++)
 			{
-				platforms.push_back(new CLPlatform(cl_platforms[i]));
+				platforms.push_back(CLPlatform(cl_platforms[i]));
 			}
 		}
 
@@ -33,8 +33,7 @@ namespace dw
 
 		CLPlatform::~CLPlatform()
 		{
-			for (auto device : m_devices)
-				delete device;
+
 		}	
 
 		std::string CLPlatform::type()
@@ -62,9 +61,9 @@ namespace dw
 			return m_device_count;
 		}
 
-		void CLPlatform::get_all_devices(std::vector<Device*>& devices)
+		std::vector<Device*> CLPlatform::get_all_devices()
 		{
-			devices = m_devices;
+			return m_devices;
 		}
 	}
 }

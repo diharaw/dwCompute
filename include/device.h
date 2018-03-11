@@ -12,7 +12,6 @@ namespace dw
 			Device() {}
 			virtual std::string name() = 0;
 
-
 		protected:
 			std::string m_name;
 		};

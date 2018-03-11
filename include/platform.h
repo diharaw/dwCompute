@@ -13,8 +13,6 @@ namespace dw
 		class Platform
 		{
 		public:
-			static void get_all_platforms(std::vector<Platform*>& platforms);
-
 			Platform() {}
 			virtual ~Platform() {}
 			virtual std::string type() = 0;
@@ -22,7 +20,7 @@ namespace dw
 			virtual std::string vendor() = 0;
 			virtual std::string version() = 0;
 			virtual int			device_count() = 0;
-			virtual void		get_all_devices(std::vector<Device*>& devices) = 0;
+			virtual std::vector<Device*> get_all_devices() = 0;
 		};
 	}
 }

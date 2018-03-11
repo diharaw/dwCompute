@@ -15,11 +15,10 @@ namespace dw
 		class CLDevice : public Device
 		{
 		public:
-			CLDevice(cl::Device);
+			CLDevice(cl::Device device);
 			std::string name() override;
 
 		private:
-			std::string m_name;
 			cl::Device  m_device;
 		};
 	}

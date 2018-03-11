@@ -15,7 +15,7 @@ namespace dw
 		class CLPlatform : public Platform
 		{
 		public:
-			static void get_all_platforms(std::vector<Platform*>& platforms);
+			static void get_all_platforms(std::vector<CLPlatform>& platforms);
 
 			CLPlatform(cl::Platform platform);
 			~CLPlatform();
@@ -23,8 +23,8 @@ namespace dw
 			std::string name() override;
 			std::string vendor() override;
 			std::string version() override;
-			int		   device_count() override;
-			void		get_all_devices(std::vector<Device*>& devices) override;
+			int		    device_count() override;
+			std::vector<Device*> get_all_devices() override;
 
 		private:
 			cl::Platform		 m_platform;

@@ -1,4 +1,4 @@
 #pragma once
 
-#include <platform.h>
-#include <device.h>
+#include <opencl/cl_platform.h>
+#include <opencl/cl_device.h>
