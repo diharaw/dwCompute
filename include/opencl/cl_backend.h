@@ -25,6 +25,10 @@ BEGIN_CMP_NAMESPACE
 struct dim3
 {
 	float x, y, z;
+
+	dim3() : x(0), y(0), z(0) {}
+	dim3(float _v) : x(_v), y(_v), z(_v) {}
+	dim3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 };
 
 class Device;
@@ -42,14 +46,14 @@ public:
 	inline std::string name();
 	inline std::string vendor();
 	inline std::string version();
-	inline int device_count();
+	inline size_t device_count();
 	inline std::vector<Device> get_all_devices();
 
 public:
 	std::string	 m_name;
 	std::string	 m_vendor;
 	std::string	 m_version;
-	int			 m_device_count;
+	size_t	     m_device_count;
 	cl::Platform m_platform;
 };
 
@@ -69,6 +73,9 @@ class Context
 {
 public:
 	Context(const Device& device);
+
+public:
+	cl::Context m_context;
 };
 
 enum BufferUsage
@@ -82,7 +89,10 @@ class Buffer
 {
 public:
 	Buffer(const Context& context, const BufferUsage& usage, const size_t& size, void* data);
-	inline void read(const Queue& queue, const bool& blocking, const size_t& size, void* host);
+	inline void read(const Queue& queue, const size_t& offset, const size_t& size, void* host);
+
+public:
+	cl::Buffer m_buffer;
 };
 
 class Program
@@ -90,6 +100,10 @@ class Program
 public:
 	Program(const Context& context, const std::string& source);
 	Program(const Context& context, const void* binary, const size_t& size);
+	bool build(const Device& device);
+
+public:
+	cl::Program m_program;
 };
 
 class Kernel
@@ -97,13 +111,19 @@ class Kernel
 public:
 	Kernel(const Program& program, const std::string& name);
 	inline void set_argument(const uint32_t& index, const Buffer& buffer);
+
+public:
+	cl::Kernel m_kernel;
 };
 
 class Queue
 {
 public:
-	Queue(const Device& device, const Context& context);
-	inline void execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local);
+	Queue(const Context& context, const Device& device);
+	inline void execute_kernel(const Kernel& kernel, const dim3& offset, const dim3& global, const dim3& local);
+
+public:
+	cl::CommandQueue m_queue;
 };
 
 END_CMP_NAMESPACE
@@ -199,9 +219,9 @@ std::string Platform::version()
 	return m_version;
 }
 
-int Platform::device_count()
+size_t Platform::device_count()
 {
-	return 1;
+	return m_device_count;
 }
 
 // -------------------------------------------------------------------------------------
@@ -233,7 +253,7 @@ std::string Device::name()
 
 Context::Context(const Device& device)
 {
-
+	m_context = cl::Context(device.m_device);
 }
 
 // -------------------------------------------------------------------------------------
@@ -242,12 +262,24 @@ Context::Context(const Device& device)
 
 Buffer::Buffer(const Context& context, const BufferUsage& usage, const size_t& size, void* data)
 {
+	cl_uint flags;
 
+	if (usage == CMP_BUFFER_USAGE_READ_ONLY)
+		flags = CL_MEM_READ_ONLY;
+	else if (usage == CMP_BUFFER_USAGE_WRITE_ONLY)
+		flags = CL_MEM_WRITE_ONLY;
+	else if (usage == CMP_BUFFER_USAGE_READ_WRITE)
+		flags = CL_MEM_READ_WRITE;
+
+	if (data)
+		flags |= CL_MEM_COPY_HOST_PTR;
+
+	m_buffer = cl::Buffer(context.m_context, flags, size, data);
 }
 
-void Buffer::read(const Queue& queue, const bool& blocking, const size_t& size, void* host)
+void Buffer::read(const Queue& queue, const size_t& offset, const size_t& size, void* host)
 {
-
+	queue.m_queue.enqueueReadBuffer(m_buffer, CL_TRUE, offset, size, host);
 }
 
 // -------------------------------------------------------------------------------------
@@ -256,12 +288,18 @@ void Buffer::read(const Queue& queue, const bool& blocking, const size_t& size, 
 
 Program::Program(const Context& context, const std::string& source)
 {
-
+	m_program = cl::Program(context.m_context, source);
 }
 
 Program::Program(const Context& context, const void* binary, const size_t& size)
 {
 
+}
+
+bool Program::build(const Device& device)
+{
+	cl_int result = m_program.build({ device.m_device });
+	return result == CL_SUCCESS;
 }
 
 // -------------------------------------------------------------------------------------
@@ -270,26 +308,29 @@ Program::Program(const Context& context, const void* binary, const size_t& size)
 
 Kernel::Kernel(const Program& program, const std::string& name)
 {
-
+	m_kernel = cl::Kernel(program.m_program, name.c_str());
 }
 
 void Kernel::set_argument(const uint32_t& index, const Buffer& buffer)
 {
-
+	m_kernel.setArg(index, buffer.m_buffer);
 }
 
 // -------------------------------------------------------------------------------------
 // Queue -------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------
 
-Queue::Queue(const Device& device, const Context& context)
+Queue::Queue(const Context& context, const Device& device)
 {
-
+	m_queue = cl::CommandQueue(context.m_context, device.m_device);
 }
 
-void Queue::execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local)
+void Queue::execute_kernel(const Kernel& kernel, const dim3& offset, const dim3& global, const dim3& local)
 {
-
+	m_queue.enqueueNDRangeKernel(kernel.m_kernel,
+								 cl::NDRange(offset.x, offset.y, offset.z),
+								 cl::NDRange(global.x, global.y, global.z),
+								 cl::NDRange(local.x, local.y, local.z));
 }
 
 END_CMP_NAMESPACE
