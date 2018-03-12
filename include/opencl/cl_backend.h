@@ -73,6 +73,7 @@ class Context
 {
 public:
 	Context(const Device& device);
+	void wait();
 
 public:
 	cl::Context m_context;
@@ -254,6 +255,11 @@ std::string Device::name()
 Context::Context(const Device& device)
 {
 	m_context = cl::Context(device.m_device);
+}
+
+void Context::wait()
+{
+
 }
 
 // -------------------------------------------------------------------------------------

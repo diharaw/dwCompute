@@ -1,4 +1,4 @@
 #pragma once
 
-#include <opencl/cl_platform.h>
-#include <opencl/cl_device.h>
+#include <opencl/cl_backend.h>
+#include <cuda/cu_backend.h>
