@@ -186,7 +186,6 @@ class Context
 {
 public:
 	Context(const Device& device);
-	void wait();
 
 public:
 	CUcontext m_context;
@@ -234,12 +233,26 @@ public:
 	CUfunction m_kernel;
 };
 
+class Event
+{
+public:
+	Event(const Context& context);
+	~Event();
+	inline bool complete();
+	inline void wait();
+
+public:
+	CUevent m_event;
+};
+
 class Queue
 {
 public:
 	Queue(const Context& context, const Device& device);
 	~Queue();
-	inline void execute_kernel(const Kernel& kernel, const dim3& offset, const dim3& global, const dim3& local);
+	inline void execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local);
+	inline void execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local, const Event& event);
+	inline void finish();
 
 public:
 	CUstream m_queue;
@@ -368,11 +381,6 @@ Context::Context(const Device& device)
 	CUDA_CHECK_ERROR(cuCtxCreate(&m_context, 0, device.m_device));
 }
 
-void Context::wait()
-{
-	CUDA_CHECK_ERROR(cuCtxSynchronize());
-}
-
 // -------------------------------------------------------------------------------------
 // Buffer ------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------
@@ -468,6 +476,30 @@ void Kernel::set_argument(const uint32_t& index, const Buffer& buffer)
 }
 
 // -------------------------------------------------------------------------------------
+// Event -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------
+
+Event::Event(const Context& context)
+{
+	CUDA_CHECK_ERROR(cuEventCreate(&m_event, CU_EVENT_BLOCKING_SYNC));
+}
+
+Event::~Event()
+{
+	CUDA_CHECK_ERROR(cuEventDestroy(m_event));
+}
+
+bool Event::complete()
+{
+	return cuEventQuery(m_event) == CUDA_SUCCESS;
+}
+
+void Event::wait()
+{
+	CUDA_CHECK_ERROR(cuEventSynchronize(m_event));
+}
+
+// -------------------------------------------------------------------------------------
 // Queue -------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------
 
@@ -481,9 +513,20 @@ Queue::~Queue()
 	CUDA_CHECK_ERROR(cuStreamDestroy(m_queue));
 }
 
-void Queue::execute_kernel(const Kernel& kernel, const dim3& offset, const dim3& global, const dim3& local)
+void Queue::execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local)
 {
 	CUDA_CHECK_ERROR(cuLaunchKernel(kernel.m_kernel, global.x, global.y, global.z, local.x, local.y, local.z, 0, m_queue, (void**)&kernel.m_arguments[0], 0));
+}
+
+void Queue::execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local, const Event& event)
+{
+	CUDA_CHECK_ERROR(cuLaunchKernel(kernel.m_kernel, global.x, global.y, global.z, local.x, local.y, local.z, 0, m_queue, (void**)&kernel.m_arguments[0], 0));
+	CUDA_CHECK_ERROR(cuEventRecord(event.m_event, m_queue));
+}
+
+void Queue::finish()
+{
+	CUDA_CHECK_ERROR(cuStreamSynchronize(m_queue));
 }
 
 END_CMP_NAMESPACE

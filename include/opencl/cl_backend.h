@@ -73,7 +73,6 @@ class Context
 {
 public:
 	Context(const Device& device);
-	void wait();
 
 public:
 	cl::Context m_context;
@@ -117,11 +116,25 @@ public:
 	cl::Kernel m_kernel;
 };
 
+class Event
+{
+public:
+	Event(const Context& context);
+	~Event();
+	inline bool complete();
+	inline void wait();
+
+public:
+	cl::Event m_event;
+};
+
 class Queue
 {
 public:
 	Queue(const Context& context, const Device& device);
-	inline void execute_kernel(const Kernel& kernel, const dim3& offset, const dim3& global, const dim3& local);
+	inline void execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local);
+	inline void execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local, const Event& event);
+	inline void finish();
 
 public:
 	cl::CommandQueue m_queue;
@@ -257,11 +270,6 @@ Context::Context(const Device& device)
 	m_context = cl::Context(device.m_device);
 }
 
-void Context::wait()
-{
-
-}
-
 // -------------------------------------------------------------------------------------
 // Buffer ------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------
@@ -323,6 +331,32 @@ void Kernel::set_argument(const uint32_t& index, const Buffer& buffer)
 }
 
 // -------------------------------------------------------------------------------------
+// Event -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------
+
+Event::Event(const Context& context)
+{
+	
+}
+
+Event::~Event()
+{
+	
+}
+
+bool Event::complete()
+{
+	cl_int status = 0;
+	m_event.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &status);
+	return status == CL_COMPLETE;
+}
+
+void Event::wait()
+{
+	m_event.wait();
+}
+
+// -------------------------------------------------------------------------------------
 // Queue -------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------
 
@@ -331,12 +365,27 @@ Queue::Queue(const Context& context, const Device& device)
 	m_queue = cl::CommandQueue(context.m_context, device.m_device);
 }
 
-void Queue::execute_kernel(const Kernel& kernel, const dim3& offset, const dim3& global, const dim3& local)
+void Queue::execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local)
 {
 	m_queue.enqueueNDRangeKernel(kernel.m_kernel,
-								 cl::NDRange(offset.x, offset.y, offset.z),
+								 cl::NDRange(0),
 								 cl::NDRange(global.x, global.y, global.z),
 								 cl::NDRange(local.x, local.y, local.z));
+}
+
+void Queue::execute_kernel(const Kernel& kernel, const dim3& global, const dim3& local, const Event& event)
+{
+	m_queue.enqueueNDRangeKernel(kernel.m_kernel,
+								 cl::NDRange(0),
+								 cl::NDRange(global.x, global.y, global.z),
+								 cl::NDRange(local.x, local.y, local.z),
+								 NULL,
+								 (cl::Event*)&event.m_event);
+}
+
+void Queue::finish()
+{
+	m_queue.finish();
 }
 
 END_CMP_NAMESPACE

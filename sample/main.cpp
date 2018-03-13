@@ -60,7 +60,7 @@
 //	return 0;
 //}
 
-#define DW_CUDA_BACKEND
+//#define DW_CUDA_BACKEND
 #include <dwCompute.h>
 
 using namespace dw;
@@ -111,6 +111,7 @@ int main()
 	cmp::Context context = cmp::Context(device);
 	cmp::Queue queue = cmp::Queue(context, device);
 	cmp::Program program = cmp::Program(context, source_string);
+	cmp::Event event = cmp::Event(context);
 
 	if (!program.build(device))
 	{
@@ -128,13 +129,23 @@ int main()
 	kernel.set_argument(1, bufY);
 	kernel.set_argument(2, bufOut);
 
-	cmp::dim3 offset = cmp::dim3();
 	cmp::dim3 global = cmp::dim3(numElements, 1, 1);
 	cmp::dim3 local = cmp::dim3(1);
 
-	queue.execute_kernel(kernel, offset, global, local);
+	queue.execute_kernel(kernel, global, local, event);
 
-	context.wait();
+	if (!event.complete())
+	{
+		std::cout << "Kernel not yet complete" << std::endl;
+	}
+
+	event.wait();
+
+	if (event.complete())
+	{
+		std::cout << "Kernel completed!" << std::endl;
+	}
+	
 	bufOut.read(queue, 0, sizeof(float) * numElements, &cpuOutput[0]);
 
 	for (int i = 0; i < numElements; i++)
