@@ -187,6 +187,7 @@ class Context
 {
 public:
 	Context(const Device& device);
+	~Context();
 
 public:
 	CUcontext m_context;
@@ -215,6 +216,7 @@ class Program
 public:
 	Program(const Context& context, const std::string& source);
 	Program(const Context& context, const void* binary, const size_t& size);
+	~Program();
 	bool build(const Device& device);
 
 public:
@@ -306,6 +308,10 @@ Platform::Platform(uint32_t id)
 	int device_count = 0;
 	cuDeviceGetCount(&device_count);
 	m_device_count = device_count;
+
+	int driver = 0;
+	cuDriverGetVersion(&driver);
+	m_version = std::to_string(driver);
 }
 
 Platform::~Platform()
@@ -330,12 +336,12 @@ std::string Platform::type()
 
 std::string Platform::name()
 {
-	return m_name;
+	return "CUDA";
 }
 
 std::string Platform::vendor()
 {
-	return m_vendor;
+	return "NVIDIA Corporation";
 }
 
 std::string Platform::version()
@@ -382,6 +388,11 @@ Context::Context(const Device& device)
 	CUDA_CHECK_ERROR(cuCtxCreate(&m_context, 0, device.m_device));
 }
 
+Context::~Context()
+{
+	CUDA_CHECK_ERROR(cuCtxDestroy(m_context));
+}
+
 // -------------------------------------------------------------------------------------
 // Buffer ------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------
@@ -421,6 +432,11 @@ Program::Program(const Context& context, const std::string& source)
 Program::Program(const Context& context, const void* binary, const size_t& size)
 {
 
+}
+
+Program::~Program()
+{
+	CUDA_CHECK_ERROR(cuModuleUnload(m_program));
 }
 
 bool Program::build(const Device& device)
