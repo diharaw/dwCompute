@@ -60,7 +60,7 @@
 //	return 0;
 //}
 
-//#define DW_CUDA_BACKEND
+#define DW_CUDA_BACKEND
 #include <dwCompute.h>
 
 using namespace dw;
@@ -92,19 +92,11 @@ int main()
 	float cpuArrayY[numElements] = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f };
 	float cpuOutput[numElements] = {};
 
-#if defined(DW_CUDA_BACKEND)
-	const char* source_string = R"(extern "C" __global__ void parallel_add(float* x, float* y, float* output) 
-	{
-    const int tid = threadIdx.x + blockDim.x*blockIdx.x;
+	const char* source_string = R"(_KERNEL_ void parallel_add(_GLOBAL_ float* x, _GLOBAL_ float* y, _GLOBAL_ float* output) 
+{
+    const int tid = _GLOBAL_ID_X_;
     output[tid] = x[tid] + y[tid];
-  })";
-#else
-	const char* source_string =
-		" __kernel void parallel_add(__global float* x, __global float* y, __global float* z){ "
-		" const int i = get_global_id(0); " // get a unique number identifying the work item in the global pool
-		" z[i] = y[i] + x[i];    " // add two arrays 
-		"}";
-#endif
+})";
 
 	cmp::Platform platform = platforms[0];
 	cmp::Device device = platform.get_all_devices()[0];

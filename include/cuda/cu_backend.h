@@ -7,6 +7,7 @@
 #include <cuda.h>
 #include <nvrtc.h>
 
+#include <kernel_macros.h>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -411,7 +412,10 @@ void Buffer::read(const Queue& queue, const size_t& offset, const size_t& size, 
 
 Program::Program(const Context& context, const std::string& source)
 {
-	m_source = source;
+	m_source = kKERNEL_MACROS;
+	m_source = m_source + "\n\n";
+	m_source = m_source + source;
+
 }
 
 Program::Program(const Context& context, const void* binary, const size_t& size)

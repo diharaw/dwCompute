@@ -10,6 +10,7 @@
 #include <CL/cl.hpp>
 #endif
 
+#include <kernel_macros.h>
 #include <vector>
 #include <string>
 
@@ -302,7 +303,11 @@ void Buffer::read(const Queue& queue, const size_t& offset, const size_t& size, 
 
 Program::Program(const Context& context, const std::string& source)
 {
-	m_program = cl::Program(context.m_context, source);
+	std::string program = kKERNEL_MACROS;
+	program = program + "\n\n";
+	program = program + source;
+
+	m_program = cl::Program(context.m_context, program);
 }
 
 Program::Program(const Context& context, const void* binary, const size_t& size)
