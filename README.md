@@ -9,5 +9,5 @@ A header-only abstraction layer for OpenCL and CUDA.
 * Kernel [DONE]
 * Event [DONE]
 * Buffer [DONE]
-* Image
-* OpenGL Interop
+* Image [TODO]
+* OpenGL Interop [TODO]
